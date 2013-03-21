@@ -1,17 +1,16 @@
 #!/usr/bin/env python2
-import sys
 import struct
-import os, os.path
+import os
 from pdftypes import LITERALS_DCT_DECODE
 from pdfcolor import LITERAL_DEVICE_GRAY, LITERAL_DEVICE_RGB
 
+
 def align32(x):
-    return ((x+3)/4)*4
+    return ((x + 3) / 4) * 4
 
 ##  BMPWriter
 ##
 class BMPWriter(object):
-
     def __init__(self, fp, bits, width, height):
         self.fp = fp
         self.bits = bits
@@ -25,29 +24,29 @@ class BMPWriter(object):
             ncols = 0
         else:
             raise ValueError(bits)
-        self.linesize = align32((self.width*self.bits+7)/8)
+        self.linesize = align32((self.width * self.bits + 7) / 8)
         self.datasize = self.linesize * self.height
-        headersize = 14+40+ncols*4
+        headersize = 14 + 40 + ncols * 4
         info = struct.pack('<IiiHHIIIIII', 40, self.width, self.height, 1, self.bits, 0, self.datasize, 0, 0, ncols, 0)
         assert len(info) == 40, len(info)
-        header = struct.pack('<ccIHHI', 'B', 'M', headersize+self.datasize, 0, 0, headersize)
+        header = struct.pack('<ccIHHI', 'B', 'M', headersize + self.datasize, 0, 0, headersize)
         assert len(header) == 14, len(header)
         self.fp.write(header)
         self.fp.write(info)
         if ncols == 2:
             # B&W color table
-            for i in (0,255):
-                self.fp.write(struct.pack('BBBx', i,i,i))
+            for i in (0, 255):
+                self.fp.write(struct.pack('BBBx', i, i, i))
         elif ncols == 256:
             # grayscale color table
             for i in xrange(256):
-                self.fp.write(struct.pack('BBBx', i,i,i))
+                self.fp.write(struct.pack('BBBx', i, i, i))
         self.pos0 = self.fp.tell()
         self.pos1 = self.pos0 + self.datasize
         return
 
     def write_line(self, y, data):
-        self.fp.seek(self.pos1 - (y+1)*self.linesize)
+        self.fp.seek(self.pos1 - (y + 1) * self.linesize)
         self.fp.write(data)
         return
 
@@ -55,7 +54,6 @@ class BMPWriter(object):
 ##  ImageWriter
 ##
 class ImageWriter(object):
-
     def __init__(self, outdir):
         self.outdir = outdir
         if not os.path.exists(self.outdir):
@@ -68,12 +66,12 @@ class ImageWriter(object):
         (width, height) = image.srcsize
         if len(filters) == 1 and filters[0] in LITERALS_DCT_DECODE:
             ext = '.jpg'
-        elif (image.bits == 1 or 
-              image.bits == 8 and image.colorspace in (LITERAL_DEVICE_RGB, LITERAL_DEVICE_GRAY)):
+        elif (image.bits == 1 or
+                          image.bits == 8 and image.colorspace in (LITERAL_DEVICE_RGB, LITERAL_DEVICE_GRAY)):
             ext = '.%dx%d.bmp' % (width, height)
         else:
             ext = '.%d.%dx%d.img' % (image.bits, width, height)
-        name = image.name+ext
+        name = image.name + ext
         path = os.path.join(self.outdir, name)
         fp = file(path, 'wb')
         if ext == '.jpg':
@@ -82,24 +80,24 @@ class ImageWriter(object):
             bmp = BMPWriter(fp, 1, width, height)
             data = stream.get_data()
             i = 0
-            width = (width+7)/8
+            width = (width + 7) / 8
             for y in xrange(height):
-                bmp.write_line(y, data[i:i+width])
+                bmp.write_line(y, data[i:i + width])
                 i += width
         elif image.bits == 8 and image.colorspace is LITERAL_DEVICE_RGB:
             bmp = BMPWriter(fp, 24, width, height)
             data = stream.get_data()
             i = 0
-            width = width*3
+            width *= 3
             for y in xrange(height):
-                bmp.write_line(y, data[i:i+width])
+                bmp.write_line(y, data[i:i + width])
                 i += width
         elif image.bits == 8 and image.colorspace is LITERAL_DEVICE_GRAY:
             bmp = BMPWriter(fp, 8, width, height)
             data = stream.get_data()
             i = 0
             for y in xrange(height):
-                bmp.write_line(y, data[i:i+width])
+                bmp.write_line(y, data[i:i + width])
                 i += width
         else:
             fp.write(stream.get_data())

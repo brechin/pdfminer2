@@ -1,13 +1,13 @@
 #!/usr/bin/env python2
-import sys
 import zlib
 from lzw import lzwdecode
 from ascii85 import ascii85decode, asciihexdecode
 from runlength import rldecode
 from ccitt import ccittfaxdecode
 from psparser import PSException, PSObject
-from psparser import LIT, KWD, STRICT
+from psparser import LIT, STRICT
 from utils import apply_png_predictor
+
 
 LITERAL_CRYPT = LIT('Crypt')
 
@@ -23,18 +23,29 @@ LITERALS_DCT_DECODE = (LIT('DCTDecode'), LIT('DCT'))
 
 ##  PDF Objects
 ##
-class PDFObject(PSObject): pass
+class PDFObject(PSObject):
+    pass
 
-class PDFException(PSException): pass
-class PDFTypeError(PDFException): pass
-class PDFValueError(PDFException): pass
-class PDFNotImplementedError(PSException): pass
+
+class PDFException(PSException):
+    pass
+
+
+class PDFTypeError(PDFException):
+    pass
+
+
+class PDFValueError(PDFException):
+    pass
+
+
+class PDFNotImplementedError(PSException):
+    pass
 
 
 ##  PDFObjRef
 ##
 class PDFObjRef(PDFObject):
-
     def __init__(self, doc, objid, _):
         if objid == 0:
             if STRICT:
@@ -45,7 +56,7 @@ class PDFObjRef(PDFObject):
         return
 
     def __repr__(self):
-        return '<PDFObjRef:%d>' % (self.objid)
+        return '<PDFObjRef:%d>' % self.objid
 
     def resolve(self):
         return self.doc.getobj(self.objid)
@@ -62,6 +73,7 @@ def resolve1(x):
         x = x.resolve()
     return x
 
+
 def resolve_all(x):
     """Recursively resolves the given object and all the internals.
     
@@ -71,11 +83,12 @@ def resolve_all(x):
     while isinstance(x, PDFObjRef):
         x = x.resolve()
     if isinstance(x, list):
-        x = [ resolve_all(v) for v in x ]
+        x = [resolve_all(v) for v in x]
     elif isinstance(x, dict):
-        for (k,v) in x.iteritems():
+        for (k, v) in x.iteritems():
             x[k] = resolve_all(v)
     return x
+
 
 def decipher_all(decipher, objid, genno, x):
     """Recursively deciphers the given object.
@@ -83,9 +96,9 @@ def decipher_all(decipher, objid, genno, x):
     if isinstance(x, str):
         return decipher(objid, genno, x)
     if isinstance(x, list):
-        x = [ decipher_all(decipher, objid, genno, v) for v in x ]
+        x = [decipher_all(decipher, objid, genno, v) for v in x]
     elif isinstance(x, dict):
-        for (k,v) in x.iteritems():
+        for (k, v) in x.iteritems():
             x[k] = decipher_all(decipher, objid, genno, v)
     return x
 
@@ -98,6 +111,7 @@ def int_value(x):
         return 0
     return x
 
+
 def float_value(x):
     x = resolve1(x)
     if not isinstance(x, float):
@@ -105,6 +119,7 @@ def float_value(x):
             raise PDFTypeError('Float required: %r' % x)
         return 0.0
     return x
+
 
 def num_value(x):
     x = resolve1(x)
@@ -114,6 +129,7 @@ def num_value(x):
         return 0
     return x
 
+
 def str_value(x):
     x = resolve1(x)
     if not isinstance(x, str):
@@ -121,6 +137,7 @@ def str_value(x):
             raise PDFTypeError('String required: %r' % x)
         return ''
     return x
+
 
 def list_value(x):
     x = resolve1(x)
@@ -130,6 +147,7 @@ def list_value(x):
         return []
     return x
 
+
 def dict_value(x):
     x = resolve1(x)
     if not isinstance(x, dict):
@@ -137,6 +155,7 @@ def dict_value(x):
             raise PDFTypeError('Dict required: %r' % x)
         return {}
     return x
+
 
 def stream_value(x):
     x = resolve1(x)
@@ -150,7 +169,6 @@ def stream_value(x):
 ##  PDFStream type
 ##
 class PDFStream(PDFObject):
-
     def __init__(self, attrs, rawdata, decipher=None):
         assert isinstance(attrs, dict)
         self.attrs = attrs
@@ -176,13 +194,13 @@ class PDFStream(PDFObject):
 
     def __contains__(self, name):
         return name in self.attrs
-    
+
     def __getitem__(self, name):
         return self.attrs[name]
-    
+
     def get(self, name, default=None):
         return self.attrs.get(name, default)
-    
+
     def get_any(self, names, default=None):
         for name in names:
             if name in self.attrs:
@@ -193,10 +211,10 @@ class PDFStream(PDFObject):
         filters = self.get_any(('F', 'Filter'))
         if not filters: return []
         if isinstance(filters, list): return filters
-        return [ filters ]
+        return [filters]
 
     def decode(self):
-        assert self.data is None and self.rawdata != None
+        assert self.data is None and self.rawdata is not None
         data = self.rawdata
         if self.decipher:
             # Handle encryption
@@ -231,7 +249,7 @@ class PDFStream(PDFObject):
                 raise PDFNotImplementedError('/Crypt filter is unsupported')
             else:
                 raise PDFNotImplementedError('Unsupported filter: %r' % f)
-            # apply predictors
+                # apply predictors
             if 'Predictor' in params:
                 pred = int_value(params['Predictor'])
                 if pred == 1:

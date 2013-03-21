@@ -4,15 +4,18 @@ import os.path
 import gzip
 import cPickle as pickle
 
-def process_cid2code(fp, check_codecs=[]):
+
+def process_cid2code(fp, check_codecs=None):
+    if not check_codecs:
+        check_codecs = []
 
     def get_canonicals(name):
         if name.endswith('-H'):
-            return (name, None)
+            return name, None
         elif name == 'H':
-            return ('H', 'V')
+            return 'H', 'V'
         else:
-            return (name+'-H', name+'-V')
+            return name + '-H', name + '-V'
 
     def get_unichr(codes):
         # determine the "most popular" candidate.
@@ -27,7 +30,7 @@ def process_cid2code(fp, check_codecs=[]):
                     d[char] += 1
                 except UnicodeError:
                     pass
-        chars = sorted(d.keys(), key=lambda char:d[char], reverse=True)
+        chars = sorted(d.keys(), key=lambda char: d[char], reverse=True)
         return chars[0]
 
     def put(dmap, code, cid, force=False):
@@ -49,7 +52,7 @@ def process_cid2code(fp, check_codecs=[]):
     is_vertical = {}
     cid2unichr_h = {} # {cid: unichr}
     cid2unichr_v = {} # {cid: unichr}
-    
+
     for line in fp:
         line = line.strip()
         if line.startswith('#'): continue
@@ -59,7 +62,7 @@ def process_cid2code(fp, check_codecs=[]):
         f = line.split('\t')
         if not f: continue
         cid = int(f[0])
-        for (x,name) in zip(f[1:], names):
+        for (x, name) in zip(f[1:], names):
             if x == '*': continue
             (hmapname, vmapname) = get_canonicals(name)
             if hmapname in code2cid:
@@ -111,28 +114,27 @@ def process_cid2code(fp, check_codecs=[]):
                     if cid not in cid2unichr_v:
                         cid2unichr_v[cid] = code
 
-    return (code2cid, is_vertical, cid2unichr_h, cid2unichr_v)
+    return code2cid, is_vertical, cid2unichr_h, cid2unichr_v
 
 # main
 def main(argv):
-
     def usage():
         print 'usage: %s output_dir regname cid2code.txt codecs ...' % argv[0]
         return 100
-    
+
     args = argv[1:]
     if len(args) < 3: return usage()
     (outdir, regname, src) = args[:3]
     check_codecs = args[3:]
 
-    print >>sys.stderr, 'reading %r...' % src
+    print >> sys.stderr, 'reading %r...' % src
     fp = file(src)
     (code2cid, is_vertical, cid2unichr_h, cid2unichr_v) = process_cid2code(fp, check_codecs)
     fp.close()
 
     for (name, cmap) in code2cid.iteritems():
         fname = '%s.pickle.gz' % name
-        print >>sys.stderr, 'writing %r...' % fname
+        print >> sys.stderr, 'writing %r...' % fname
         fp = gzip.open(os.path.join(outdir, fname), 'wb')
         data = dict(
             IS_VERTICAL=is_vertical.get(name, False),
@@ -142,7 +144,7 @@ def main(argv):
         fp.close()
 
     fname = 'to-unicode-%s.pickle.gz' % regname
-    print >>sys.stderr, 'writing %r...' % fname
+    print >> sys.stderr, 'writing %r...' % fname
     fp = gzip.open(os.path.join(outdir, fname), 'wb')
     data = dict(
         CID2UNICHR_H=cid2unichr_h,
@@ -152,5 +154,6 @@ def main(argv):
     fp.close()
 
     return 0
+
 
 if __name__ == '__main__': sys.exit(main(sys.argv))

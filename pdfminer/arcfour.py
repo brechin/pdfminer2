@@ -1,15 +1,14 @@
 #!/usr/bin/env python2
-
 """ Python implementation of Arcfour encryption algorithm.
 
 This code is in the public domain.
 
 """
 
+
 ##  Arcfour
 ##
 class Arcfour(object):
-
     """
     >>> Arcfour('Key').process('Plaintext').encode('hex')
     'bbf316e8d940af0ad3'
@@ -35,15 +34,18 @@ class Arcfour(object):
         s = self.s
         r = ''
         for c in data:
-            i = (i+1) % 256
-            j = (j+s[i]) % 256
+            i = (i + 1) % 256
+            j = (j + s[i]) % 256
             (s[i], s[j]) = (s[j], s[i])
-            k = s[(s[i]+s[j]) % 256]
+            k = s[(s[i] + s[j]) % 256]
             r += chr(ord(c) ^ k)
         (self.i, self.j) = (i, j)
         return r
 
+
 # test
 if __name__ == '__main__':
     import doctest
+
+
     doctest.testmod()

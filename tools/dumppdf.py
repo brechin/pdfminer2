@@ -6,15 +6,19 @@
 #  options:
 #    -i objid : object id
 #
-import sys, re
+import sys
+import re
+
 from pdfminer.psparser import PSKeyword, PSLiteral
 from pdfminer.pdfparser import PDFDocument, PDFParser, PDFNoOutlines
 from pdfminer.pdftypes import PDFStream, PDFObjRef, resolve1, stream_value
 
 
 ESC_PAT = re.compile(r'[\000-\037&<>()"\042\047\134\177-\377]')
+
+
 def e(s):
-    return ESC_PAT.sub(lambda m:'&#%d;' % ord(m.group(0)), s)
+    return ESC_PAT.sub(lambda m: '&#%d;' % ord(m.group(0)), s)
 
 
 # dumpxml
@@ -22,10 +26,10 @@ def dumpxml(out, obj, codec=None):
     if obj is None:
         out.write('<null />')
         return
-    
+
     if isinstance(obj, dict):
         out.write('<dict size="%d">\n' % len(obj))
-        for (k,v) in obj.iteritems():
+        for (k, v) in obj.iteritems():
             out.write('<key>%s</key>\n' % k)
             out.write('<value>')
             dumpxml(out, v)
@@ -112,7 +116,8 @@ def dumpoutline(outfp, fname, objids, pagenos, password='',
     parser.set_document(doc)
     doc.set_parser(parser)
     doc.initialize(password)
-    pages = dict( (page.pageid, pageno) for (pageno,page) in enumerate(doc.get_pages()) )
+    pages = dict((page.pageid, pageno) for (pageno, page) in enumerate(doc.get_pages()))
+
     def resolve_dest(dest):
         if isinstance(dest, str):
             dest = resolve1(doc.get_dest(dest))
@@ -121,10 +126,11 @@ def dumpoutline(outfp, fname, objids, pagenos, password='',
         if isinstance(dest, dict):
             dest = dest['D']
         return dest
+
     try:
         outlines = doc.get_outlines()
         outfp.write('<outlines>\n')
-        for (level,title,dest,a,se) in outlines:
+        for (level, title, dest, a, se) in outlines:
             pageno = None
             if dest:
                 dest = resolve_dest(dest)
@@ -166,7 +172,7 @@ def dumppdf(outfp, fname, objids, pagenos, password='',
             obj = doc.getobj(objid)
             dumpxml(outfp, obj, codec=codec)
     if pagenos:
-        for (pageno,page) in enumerate(doc.get_pages()):
+        for (pageno, page) in enumerate(doc.get_pages()):
             if pageno in pagenos:
                 if codec:
                     for obj in page.contents:
@@ -179,7 +185,7 @@ def dumppdf(outfp, fname, objids, pagenos, password='',
     if (not objids) and (not pagenos) and (not dumpall):
         dumptrailers(outfp, doc)
     fp.close()
-    if codec not in ('raw','binary'):
+    if codec not in ('raw', 'binary'):
         outfp.write('\n')
     return
 
@@ -187,9 +193,12 @@ def dumppdf(outfp, fname, objids, pagenos, password='',
 # main
 def main(argv):
     import getopt
+
+
     def usage():
         print 'usage: %s [-d] [-a] [-p pageid] [-P password] [-r|-b|-t] [-T] [-i objid] file ...' % argv[0]
         return 100
+
     try:
         (opts, args) = getopt.getopt(argv[1:], 'dap:P:rbtTi:')
     except getopt.GetoptError:
@@ -204,17 +213,27 @@ def main(argv):
     proc = dumppdf
     outfp = sys.stdout
     for (k, v) in opts:
-        if k == '-d': debug += 1
-        elif k == '-i': objids.extend( int(x) for x in v.split(',') )
-        elif k == '-p': pagenos.update( int(x)-1 for x in v.split(',') )
-        elif k == '-P': password = v
-        elif k == '-a': dumpall = True
-        elif k == '-r': codec = 'raw'
-        elif k == '-b': codec = 'binary'
-        elif k == '-t': codec = 'text'
-        elif k == '-T': proc = dumpoutline
-        elif k == '-o': outfp = file(v, 'wb')
-    #
+        if k == '-d':
+            debug += 1
+        elif k == '-i':
+            objids.extend(int(x) for x in v.split(','))
+        elif k == '-p':
+            pagenos.update(int(x) - 1 for x in v.split(','))
+        elif k == '-P':
+            password = v
+        elif k == '-a':
+            dumpall = True
+        elif k == '-r':
+            codec = 'raw'
+        elif k == '-b':
+            codec = 'binary'
+        elif k == '-t':
+            codec = 'text'
+        elif k == '-T':
+            proc = dumpoutline
+        elif k == '-o':
+            outfp = file(v, 'wb')
+            #
     PDFDocument.debug = debug
     PDFParser.debug = debug
     #
@@ -222,5 +241,6 @@ def main(argv):
         proc(outfp, fname, objids, pagenos, password=password,
              dumpall=dumpall, codec=codec)
     return
+
 
 if __name__ == '__main__': sys.exit(main(sys.argv))

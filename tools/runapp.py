@@ -15,7 +15,6 @@ from SimpleHTTPServer import SimpleHTTPRequestHandler
 ##  WebAppHandler
 ##
 class WebAppHandler(SimpleHTTPRequestHandler):
-
     APP_CLASS = None
 
     def do_POST(self):
@@ -28,7 +27,7 @@ class WebAppHandler(SimpleHTTPRequestHandler):
         rest = self.path
         i = rest.rfind('?')
         if i >= 0:
-            rest, query = rest[:i], rest[i+1:]
+            rest, query = rest[:i], rest[i + 1:]
         else:
             query = ''
         i = rest.find('/')
@@ -38,17 +37,11 @@ class WebAppHandler(SimpleHTTPRequestHandler):
             script, rest = rest, ''
         scriptname = '/' + script
         scriptfile = self.translate_path(scriptname)
-        env = {}
-        env['SERVER_SOFTWARE'] = self.version_string()
-        env['SERVER_NAME'] = self.server.server_name
-        env['GATEWAY_INTERFACE'] = 'CGI/1.1'
-        env['SERVER_PROTOCOL'] = self.protocol_version
-        env['SERVER_PORT'] = str(self.server.server_port)
-        env['REQUEST_METHOD'] = self.command
         uqrest = urllib.unquote(rest)
-        env['PATH_INFO'] = uqrest
-        env['PATH_TRANSLATED'] = self.translate_path(uqrest)
-        env['SCRIPT_NAME'] = scriptname
+        env = {'SERVER_SOFTWARE': self.version_string(), 'SERVER_NAME': self.server.server_name,
+               'GATEWAY_INTERFACE': 'CGI/1.1', 'SERVER_PROTOCOL': self.protocol_version,
+               'SERVER_PORT': str(self.server.server_port), 'REQUEST_METHOD': self.command, 'PATH_INFO': uqrest,
+               'PATH_TRANSLATED': self.translate_path(uqrest), 'SCRIPT_NAME': scriptname}
         if query:
             env['QUERY_STRING'] = query
         host = self.address_string()
@@ -84,12 +77,16 @@ class WebAppHandler(SimpleHTTPRequestHandler):
         app.run()
         return
 
+
 # main
 def main(argv):
-    import getopt, imp
+    import getopt
+    import imp
+
     def usage():
         print 'usage: %s [-h host] [-p port] [-n name] module.class' % argv[0]
         return 100
+
     try:
         (opts, args) = getopt.getopt(argv[1:], 'h:p:n:')
     except getopt.GetoptError:
@@ -98,16 +95,20 @@ def main(argv):
     port = 8080
     name = 'WebApp'
     for (k, v) in opts:
-        if k == '-h': host = v
-        elif k == '-p': port = int(v)
-        elif k == '-n': name = v
+        if k == '-h':
+            host = v
+        elif k == '-p':
+            port = int(v)
+        elif k == '-n':
+            name = v
     if not args: return usage()
     path = args.pop(0)
     module = imp.load_source('app', path)
     WebAppHandler.APP_CLASS = getattr(module, name)
-    print 'Listening %s:%d...' % (host,port)
-    httpd = HTTPServer((host,port), WebAppHandler)
+    print 'Listening %s:%d...' % (host, port)
+    httpd = HTTPServer((host, port), WebAppHandler)
     httpd.serve_forever()
     return
+
 
 if __name__ == '__main__': sys.exit(main(sys.argv))

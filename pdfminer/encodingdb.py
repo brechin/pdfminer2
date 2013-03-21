@@ -9,6 +9,8 @@ from latin_enc import ENCODING
 ##  name2unicode
 ##
 STRIP_NAME = re.compile(r'[0-9]+')
+
+
 def name2unicode(name):
     """Converts Adobe glyph names to Unicode numbers."""
     if name in glyphname2unicode:
@@ -21,12 +23,11 @@ def name2unicode(name):
 ##  EncodingDB
 ##
 class EncodingDB(object):
-
     std2unicode = {}
     mac2unicode = {}
     win2unicode = {}
     pdf2unicode = {}
-    for (name,std,mac,win,pdf) in ENCODING:
+    for (name, std, mac, win, pdf) in ENCODING:
         c = name2unicode(name)
         if std: std2unicode[std] = c
         if mac: mac2unicode[mac] = c
@@ -34,15 +35,15 @@ class EncodingDB(object):
         if pdf: pdf2unicode[pdf] = c
 
     encodings = {
-      'StandardEncoding': std2unicode,
-      'MacRomanEncoding': mac2unicode,
-      'WinAnsiEncoding': win2unicode,
-      'PDFDocEncoding': pdf2unicode,
-      }
+        'StandardEncoding': std2unicode,
+        'MacRomanEncoding': mac2unicode,
+        'WinAnsiEncoding': win2unicode,
+        'PDFDocEncoding': pdf2unicode,
+    }
 
     @classmethod
-    def get_encoding(klass, name, diff=None):
-        cid2unicode = klass.encodings.get(name, klass.std2unicode)
+    def get_encoding(cls, name, diff=None):
+        cid2unicode = cls.encodings.get(name, cls.std2unicode)
         if diff:
             cid2unicode = cid2unicode.copy()
             cid = 0
