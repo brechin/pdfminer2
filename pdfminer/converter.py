@@ -6,7 +6,7 @@ from layout import LTContainer, LTPage, LTText, LTLine, LTRect, LTCurve
 from layout import LTFigure, LTImage, LTChar, LTTextLine
 from layout import LTTextBox, LTTextBoxVertical, LTTextGroup
 from utils import apply_matrix_pt, mult_matrix
-from utils import enc, bbox2str
+from utils import enc, bbox2str, bbox2dims
 
 
 ##  PDFLayoutAnalyzer
@@ -383,12 +383,16 @@ class HTMLConverter(PDFConverter):
 ##
 class XMLConverter(PDFConverter):
     def __init__(self, rsrcmgr, outfp, codec='utf-8', pageno=1,
-                 laparams=None, imagewriter=None, layoutmode='exact'):
+                 laparams=None, imagewriter=None, layoutmode='exact', scale=1):
         PDFConverter.__init__(self, rsrcmgr, outfp, codec=codec, pageno=pageno, laparams=laparams)
+        self.scale = scale
         self.imagewriter = imagewriter
         self.write_header()
         self.layoutmode = layoutmode
         return
+
+    def scaled_bbox(self, item):
+        return 'bbox="%s" %s' % (bbox2str(item.bbox, scale=self.scale), bbox2dims(item.bbox, scale=self.scale))
 
     def write_header(self):
         self.outfp.write('<?xml version="1.0" encoding="%s" ?>\n' % self.codec)
@@ -406,10 +410,10 @@ class XMLConverter(PDFConverter):
     def receive_layout(self, ltpage):
         def show_group(item):
             if isinstance(item, LTTextBox):
-                self.outfp.write('<textbox id="%d" bbox="%s" />\n' %
-                                 (item.index, bbox2str(item.bbox)))
+                self.outfp.write('<textbox id="%d" %s />\n' %
+                                 (item.index, self.scaled_bbox(item)))
             elif isinstance(item, LTTextGroup):
-                self.outfp.write('<textgroup bbox="%s">\n' % bbox2str(item.bbox))
+                self.outfp.write('<textgroup %s>\n' % (self.scaled_bbox(item)))
                 for child in item:
                     show_group(child)
                 self.outfp.write('</textgroup>\n')
@@ -417,8 +421,8 @@ class XMLConverter(PDFConverter):
 
         def render(item):
             if isinstance(item, LTPage):
-                self.outfp.write('<page id="%s" bbox="%s" rotate="%d">\n' %
-                                 (item.pageid, bbox2str(item.bbox), item.rotate))
+                self.outfp.write('<page number="%s" id="%s" %s rotate="%d">\n' %
+                                 (item.pageid, item.pageid, self.scaled_bbox(item), item.rotate))
                 for child in item:
                     render(child)
                 if item.groups is not None:
@@ -428,37 +432,38 @@ class XMLConverter(PDFConverter):
                     self.outfp.write('</layout>\n')
                 self.outfp.write('</page>\n')
             elif isinstance(item, LTLine):
-                self.outfp.write('<line linewidth="%d" bbox="%s" />\n' %
-                                 (item.linewidth, bbox2str(item.bbox)))
+                self.outfp.write('<line linewidth="%d" %s />\n' %
+                                 (item.linewidth, self.scaled_bbox(item)))
             elif isinstance(item, LTRect):
-                self.outfp.write('<rect linewidth="%d" bbox="%s" />\n' %
-                                 (item.linewidth, bbox2str(item.bbox)))
+                self.outfp.write('<rect linewidth="%d" %s />\n' %
+                                 (item.linewidth, self.scaled_bbox(item)))
             elif isinstance(item, LTCurve):
-                self.outfp.write('<curve linewidth="%d" bbox="%s" pts="%s"/>\n' %
-                                 (item.linewidth, bbox2str(item.bbox), item.get_pts()))
+                self.outfp.write('<curve linewidth="%d" %s pts="%s" />\n' %
+                                 (item.linewidth, self.scaled_bbox(item), item.get_pts()))
             elif isinstance(item, LTFigure):
-                self.outfp.write('<figure name="%s" bbox="%s">\n' %
-                                 (item.name, bbox2str(item.bbox)))
+                self.outfp.write('<figure name="%s" %s>\n' %
+                                 (item.name, self.scaled_bbox(item)))
                 for child in item:
                     render(child)
                 self.outfp.write('</figure>\n')
             elif isinstance(item, LTTextLine):
-                self.outfp.write('<textline bbox="%s">\n' % bbox2str(item.bbox))
-                [render(child) for child in item]
+                self.outfp.write('<textline %s>\n' % self.scaled_bbox(item))
+                for child in item:
+                    render(child)
                 self.outfp.write('</textline>\n')
             elif isinstance(item, LTTextBox):
                 wmode = ''
                 if isinstance(item, LTTextBoxVertical):
                     wmode = ' wmode="vertical"'
-                self.outfp.write('<textbox id="%d" bbox="%s"%s>\n' %
-                                 (item.index, bbox2str(item.bbox), wmode))
+                self.outfp.write('<textbox id="%d" %s %s>\n' %
+                                 (item.index, self.scaled_bbox(item), wmode))
                 for child in item:
                     render(child)
                 self.outfp.write('</textbox>\n')
             elif isinstance(item, LTChar):
                 if self.layoutmode == 'exact':
-                    self.outfp.write('<text font="%s" bbox="%s" size="%.3f">' %
-                                     (enc(item.fontname), bbox2str(item.bbox), item.size))
+                    self.outfp.write('<text font="%s" %s size="%.3f">' %
+                                     (enc(item.fontname), self.scaled_bbox(item), item.size))
                     self.write_text(item.get_text())
                     self.outfp.write('</text>\n')
                 else:

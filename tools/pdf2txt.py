@@ -105,7 +105,7 @@ def main(argv):
                                imagewriter=imagewriter)
     elif outtype == 'xml':
         device = XMLConverter(rsrcmgr, outfp, codec=codec, laparams=laparams,
-                              imagewriter=imagewriter, layoutmode=layoutmode)
+                              imagewriter=imagewriter, layoutmode=layoutmode, scale=scale)
     elif outtype == 'html':
         device = HTMLConverter(rsrcmgr, outfp, codec=codec, scale=scale,
                                layoutmode=layoutmode, laparams=laparams,

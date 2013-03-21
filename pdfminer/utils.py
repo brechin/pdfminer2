@@ -220,8 +220,13 @@ def enc(x, codec='ascii'):
     return x.encode(codec, 'xmlcharrefreplace')
 
 
-def bbox2str((x0, y0, x1, y1)):
-    return '%.3f,%.3f,%.3f,%.3f' % (x0, y0, x1, y1)
+def bbox2str((x0, y0, x1, y1), scale=1):
+    return '%.3f,%.3f,%.3f,%.3f' % (x0 * scale, y0 * scale, x1 * scale, y1 * scale)
+
+
+def bbox2dims((x0, y0, x1, y1), scale=1):
+    return 'top="%.3f" left="%.3f" width="%.3f" height="%.3f"' % (
+        y0 * scale, x0 * scale, (x1 - x0) * scale, (y1 - y0) * scale)
 
 
 def matrix2str((a, b, c, d, e, f)):
