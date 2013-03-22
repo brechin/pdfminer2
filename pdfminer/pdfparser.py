@@ -28,22 +28,28 @@ from utils import decode_text, ObjIdRange
 
 ##  Exceptions
 ##
-class PDFSyntaxError(PDFException): pass
+class PDFSyntaxError(PDFException):
+    pass
 
 
-class PDFNoValidXRef(PDFSyntaxError): pass
+class PDFNoValidXRef(PDFSyntaxError):
+    pass
 
 
-class PDFNoOutlines(PDFException): pass
+class PDFNoOutlines(PDFException):
+    pass
 
 
-class PDFDestinationNotFound(PDFException): pass
+class PDFDestinationNotFound(PDFException):
+    pass
 
 
-class PDFEncryptionError(PDFException): pass
+class PDFEncryptionError(PDFException):
+    pass
 
 
-class PDFPasswordIncorrect(PDFEncryptionError): pass
+class PDFPasswordIncorrect(PDFEncryptionError):
+    pass
 
 
 # some predefined literals and keywords.
@@ -374,26 +380,26 @@ class PDFDocument(object):
         self.is_extractable = bool(P & 16)
         # Algorithm 3.2
         password = (password + self.PASSWORD_PADDING)[:32] # 1
-        hash = md5.md5(password) # 2
-        hash.update(O) # 3
-        hash.update(struct.pack('<l', P)) # 4
-        hash.update(docid[0]) # 5
+        md5Hash = md5.md5(password)  # 2
+        md5Hash.update(O)  # 3
+        md5Hash.update(struct.pack('<l', P))  # 4
+        md5Hash.update(docid[0])  # 5
         if 4 <= R:
             # 6
             raise PDFNotImplementedError('Revision 4 encryption is currently unsupported')
         if 3 <= R:
             # 8
             for _ in xrange(50):
-                hash = md5.md5(hash.digest()[:length / 8])
-        key = hash.digest()[:length / 8]
+                md5Hash = md5.md5(md5Hash.digest()[:length / 8])
+        key = md5Hash.digest()[:length / 8]
         if R == 2:
             # Algorithm 3.4
             u1 = Arcfour(key).process(self.PASSWORD_PADDING)
         elif R == 3:
             # Algorithm 3.5
-            hash = md5.md5(self.PASSWORD_PADDING) # 2
-            hash.update(docid[0]) # 3
-            x = Arcfour(key).process(hash.digest()[:16]) # 4
+            md5Hash = md5.md5(self.PASSWORD_PADDING) # 2
+            md5Hash.update(docid[0]) # 3
+            x = Arcfour(key).process(md5Hash.digest()[:16]) # 4
             for i in xrange(1, 19 + 1):
                 k = ''.join(chr(ord(c) ^ i) for c in key)
                 x = Arcfour(k).process(x)
@@ -410,8 +416,8 @@ class PDFDocument(object):
 
     def decrypt_rc4(self, objid, genno, data):
         key = self.decrypt_key + struct.pack('<L', objid)[:3] + struct.pack('<L', genno)[:2]
-        hash = md5.md5(key)
-        key = hash.digest()[:min(len(key), 16)]
+        md5Hash = md5.md5(key)
+        key = md5Hash.digest()[:min(len(key), 16)]
         return Arcfour(key).process(data)
 
     KEYWORD_OBJ = KWD('obj')

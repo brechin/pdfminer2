@@ -220,12 +220,18 @@ def enc(x, codec='ascii'):
     return x.encode(codec, 'xmlcharrefreplace')
 
 
-def bbox2str((x0, y0, x1, y1), scale=1):
-    return '%.3f,%.3f,%.3f,%.3f' % (x0 * scale, y0 * scale, x1 * scale, y1 * scale)
+def bbox2str((x0, y0, x1, y1), scale=1, roundCoords=False):
+    formatString = '%.3f,%.3f,%.3f,%.3f'
+    if roundCoords:
+        formatString = '%d,%d,%d,%d'
+    return formatString % (x0 * scale, y0 * scale, x1 * scale, y1 * scale)
 
 
-def bbox2dims((x0, y0, x1, y1), scale=1):
-    return 'top="%.3f" left="%.3f" width="%.3f" height="%.3f"' % (
+def bbox2dims((x0, y0, x1, y1), scale=1, roundCoords=False):
+    formatString = 'top="%.3f" left="%.3f" width="%.3f" height="%.3f"'
+    if roundCoords:
+        formatString = 'top="%d" left="%d" width="%d" height="%d"'
+    return formatString % (
         y0 * scale, x0 * scale, (x1 - x0) * scale, (y1 - y0) * scale)
 
 
@@ -265,7 +271,7 @@ class ObjIdRange(object):
 ##
 class Plane(object):
     def __init__(self, objs=None, gridsize=50):
-        self._objs = []
+        self._objs = set()
         self._grid = {}
         self.gridsize = gridsize
         if objs is not None:
@@ -300,7 +306,7 @@ class Plane(object):
             else:
                 r = self._grid[k]
             r.append(obj)
-        self._objs.append(obj)
+        self._objs.add(obj)
         return
 
     # remove(obj): displace an object.
@@ -317,11 +323,14 @@ class Plane(object):
     def find(self, (x0, y0, x1, y1)):
         done = set()
         for k in self._getrange((x0, y0, x1, y1)):
-            if k not in self._grid: continue
+            if k not in self._grid:
+                continue
             for obj in self._grid[k]:
-                if obj in done: continue
+                if obj in done:
+                    continue
                 done.add(obj)
                 if (obj.x1 <= x0 or x1 <= obj.x0 or
-                            obj.y1 <= y0 or y1 <= obj.y0): continue
+                            obj.y1 <= y0 or y1 <= obj.y0):
+                    continue
                 yield obj
         return

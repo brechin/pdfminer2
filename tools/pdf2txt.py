@@ -8,19 +8,27 @@ from pdfminer.cmapdb import CMapDB
 from pdfminer.layout import LAParams
 from pdfminer.image import ImageWriter
 
+
+def getRealOutput(outfile):
+    if outfile is not None:
+        return file(outfile, 'wb')
+    else:
+        return sys.stdout
+
+
 # main
 def main(argv):
     import getopt
 
-
     def usage():
         print ('usage: %s [-d] [-p pagenos] [-m maxpages] [-P password] [-o output] [-C] '
                '[-n] [-A] [-V] [-M char_margin] [-L line_margin] [-W word_margin] [-F boxes_flow] '
-               '[-Y layout_mode] [-O output_dir] [-t text|html|xml|tag] [-c codec] [-s scale] file ...' % argv[0])
+               '[-Y layout_mode] [-O output_dir] [-t text|html|xml|tag] [-c codec] [-s scale] [-r] '
+               '[-S] [-f] file ...' % argv[0])
         return 100
 
     try:
-        (opts, args) = getopt.getopt(argv[1:], 'dp:m:P:o:CnAVM:L:W:F:Y:O:t:c:s:')
+        (opts, args) = getopt.getopt(argv[1:], 'fSrdp:m:P:o:CnAVM:L:W:F:Y:O:t:c:s:')
     except getopt.GetoptError:
         return usage()
     if not args: return usage()
@@ -40,6 +48,9 @@ def main(argv):
     scale = 1
     caching = True
     showpageno = True
+    roundCoords = False
+    simplifyOutput = False
+    formatOutput = False
     laparams = LAParams()
     for (k, v) in opts:
         if k == '-d':
@@ -78,7 +89,13 @@ def main(argv):
             codec = v
         elif k == '-s':
             scale = float(v)
-            #
+        elif k == '-r':
+            roundCoords = True
+        elif k == '-S':
+            simplifyOutput = True
+        elif k == '-f':
+            formatOutput = True
+
     PDFDocument.debug = debug
     PDFParser.debug = debug
     CMapDB.debug = debug
@@ -96,16 +113,21 @@ def main(argv):
                 outtype = 'xml'
             elif outfile.endswith('.tag'):
                 outtype = 'tag'
-    if outfile:
-        outfp = file(outfile, 'wb')
+    if formatOutput and outtype.endswith('ml'):
+        try:
+            from cStringIO import StringIO
+        except ImportError:
+            from StringIO import StringIO
+        outfp = StringIO()
     else:
-        outfp = sys.stdout
+        outfp = getRealOutput(outfile)
     if outtype == 'text':
         device = TextConverter(rsrcmgr, outfp, codec=codec, laparams=laparams,
                                imagewriter=imagewriter)
     elif outtype == 'xml':
         device = XMLConverter(rsrcmgr, outfp, codec=codec, laparams=laparams,
-                              imagewriter=imagewriter, layoutmode=layoutmode, scale=scale)
+                              imagewriter=imagewriter, layoutmode=layoutmode,
+                              scale=scale, roundCoords=roundCoords, simplifyOutput=simplifyOutput)
     elif outtype == 'html':
         device = HTMLConverter(rsrcmgr, outfp, codec=codec, scale=scale,
                                layoutmode=layoutmode, laparams=laparams,
@@ -120,6 +142,20 @@ def main(argv):
                     caching=caching, check_extractable=True)
         fp.close()
     device.close()
+    if formatOutput:
+        root = outfp.getvalue()
+        with getRealOutput(outfile) as realOutput:
+            try:
+                from bs4 import BeautifulSoup as bs
+            except ImportError:
+                bs = None
+                sys.stderr.write('Could not import BeautifulSoup, skipping output formatting')
+                realOutput.write(root)
+            else:
+                soup = bs(root)
+                prettyHTML = soup.prettify()
+                realOutput.write(prettyHTML)
+
     outfp.close()
     return
 
