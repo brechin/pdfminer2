@@ -392,11 +392,13 @@ class XMLConverter(PDFConverter):
         self.layoutmode = layoutmode
         self.roundCoords = roundCoords
         self.simplerOutput = simplifyOutput
+        self._yoffset = None
         return
 
     def scaled_bbox(self, item):
-        return 'bbox="%s" %s' % (bbox2str(item.bbox, scale=self.scale, roundCoords=self.roundCoords),
-                                 bbox2dims(item.bbox, scale=self.scale, roundCoords=self.roundCoords))
+        return 'bbox="%s" %s' % (
+            bbox2str(item.bbox, scale=self.scale, roundCoords=self.roundCoords, yOffset=self._yoffset),
+            bbox2dims(item.bbox, scale=self.scale, roundCoords=self.roundCoords, yOffset=self._yoffset))
 
     def write_header(self):
         self.outfp.write('<?xml version="1.0" encoding="%s" ?>\n' % self.codec)
@@ -429,6 +431,8 @@ class XMLConverter(PDFConverter):
 
         def render(item):
             if isinstance(item, LTPage):
+                # Get max Y coord
+                self._yoffset = item.y1
                 self.outfp.write('<page number="%s" id="%s" %s rotate="%d">\n' %
                                  (item.pageid, item.pageid, self.scaled_bbox(item), item.rotate))
                 for child in item:

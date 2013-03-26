@@ -220,14 +220,18 @@ def enc(x, codec='ascii'):
     return x.encode(codec, 'xmlcharrefreplace')
 
 
-def bbox2str((x0, y0, x1, y1), scale=1, roundCoords=False):
+def bbox2str((x0, y0, x1, y1), scale=1, roundCoords=False, yOffset=None):
+    if yOffset is not None:
+        (y0, y1) = (yOffset - y1, yOffset - y0)
     formatString = '%.3f,%.3f,%.3f,%.3f'
     if roundCoords:
         formatString = '%d,%d,%d,%d'
     return formatString % (x0 * scale, y0 * scale, x1 * scale, y1 * scale)
 
 
-def bbox2dims((x0, y0, x1, y1), scale=1, roundCoords=False):
+def bbox2dims((x0, y0, x1, y1), scale=1, roundCoords=False, yOffset=None):
+    if yOffset is not None:
+        (y0, y1) = (yOffset - y1, yOffset - y0)
     formatString = 'top="%.3f" left="%.3f" width="%.3f" height="%.3f"'
     if roundCoords:
         formatString = 'top="%d" left="%d" width="%d" height="%d"'
