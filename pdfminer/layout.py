@@ -1,5 +1,5 @@
 #!/usr/bin/env python2
-from utils import INF, Plane, get_bound, uniq, csort, fsplit
+from utils import INF, Plane, get_bound, uniq, csort, fsplit, isany, dist
 from utils import bbox2str, matrix2str, apply_matrix_pt
 
 
@@ -549,47 +549,19 @@ class LTLayoutContainer(LTContainer):
         return
 
     def group_textboxes(self, laparams, boxes):
-        def dist(obj1, obj2):
-            """A distance function between two TextBoxes.
-            
-            Consider the bounding rectangle for obj1 and obj2.
-            Return its area less the areas of obj1 and obj2, 
-            shown as 'www' below. This value may be negative.
-                    +------+..........+ (x1,y1)
-                    | obj1 |wwwwwwwwww:
-                    +------+www+------+
-                    :wwwwwwwwww| obj2 |
-            (x0,y0) +..........+------+
-            """
-            x0 = min(obj1.x0, obj2.x0)
-            y0 = min(obj1.y0, obj2.y0)
-            x1 = max(obj1.x1, obj2.x1)
-            y1 = max(obj1.y1, obj2.y1)
-            return (x1 - x0) * (y1 - y0) - obj1.width * obj1.height - obj2.width * obj2.height
-
-        def isany(obj1, obj2):
-            """Check if there's any other object between obj1 and obj2.
-            """
-            x0 = min(obj1.x0, obj2.x0)
-            y0 = min(obj1.y0, obj2.y0)
-            x1 = max(obj1.x1, obj2.x1)
-            y1 = max(obj1.y1, obj2.y1)
-            objs = set(plane.find((x0, y0, x1, y1)))
-            return objs.difference((obj1, obj2))
-
-            # XXX this still takes O(n^2)  :(
-
         dists = []
-        for i in xrange(len(boxes)):
-            obj1 = boxes[i]
-            for j in xrange(i + 1, len(boxes)):
-                obj2 = boxes[j]
-                dists.append((0, dist(obj1, obj2), obj1, obj2))
-        dists.sort()
+        for (obj1, obj2) in zip(boxes[0:], boxes[1:]):
+            dists.append((0, dist(obj1, obj2), obj1, obj2))
+            #for i in xrange(len(boxes)):
+        #    obj1 = boxes[i]
+        #    for j in xrange(i + 1, len(boxes)):
+        #        obj2 = boxes[j]
+        #        dists.append((0, dist(obj1, obj2), obj1, obj2))
+        #dists.sort()
         plane = Plane(boxes)
         while dists:
             (c, d, obj1, obj2) = dists.pop(0)
-            if c == 0 and isany(obj1, obj2):
+            if c == 0 and isany(obj1, obj2, plane):
                 dists.append((1, d, obj1, obj2))
                 continue
             if (isinstance(obj1, LTTextBoxVertical) or
@@ -601,14 +573,10 @@ class LTLayoutContainer(LTContainer):
                 group = LTTextGroupLRTB([obj1, obj2])
             plane.remove(obj1)
             plane.remove(obj2)
-            # Below optimized line submitted by GitHub user jcushman
-            #dists = [n for n in dists if n[2] in plane._objs and n[3] in plane._objs]
-            dists = [n for n in dists if set(n[2:4]) <= plane._objs]
-            #dists = [(c, d, o1, o2) for (c, d, o1, o2) in dists
-            #         if o1 in plane and o2 in plane]
+            dists = [n for n in dists if not n[2] in (obj1, obj2) and not n[3] in (obj1, obj2)]
             for other in plane:
                 dists.append((0, dist(group, other), group, other))
-            dists.sort()
+                #dists.sort()
             plane.add(group)
         assert len(plane) == 1
         return list(plane)
@@ -620,7 +588,7 @@ class LTLayoutContainer(LTContainer):
         for obj in otherobjs:
             obj.analyze(laparams)
         if not textobjs:
-            return
+            return None
         textlines = list(self.get_textlines(laparams, textobjs))
         assert len(textobjs) <= sum(len(line._objs) for line in textlines)
         (empties, textlines) = fsplit(lambda obj: obj.is_empty(), textlines)
@@ -635,7 +603,6 @@ class LTLayoutContainer(LTContainer):
             assigner.run(group)
         textboxes.sort(key=lambda box: box.index)
         self._objs = textboxes + otherobjs + empties
-        return
 
 
 ##  LTFigure

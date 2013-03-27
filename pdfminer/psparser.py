@@ -551,7 +551,6 @@ class PSStackParser(PSBaseParser):
         """
         while not self.results:
             (pos, token) = self.nexttoken()
-            #print (pos,token), (self.curtype, self.curstack)
             if (isinstance(token, int) or
                     isinstance(token, float) or
                     isinstance(token, bool) or
@@ -595,7 +594,7 @@ class PSStackParser(PSBaseParser):
                     if STRICT:
                         raise
             else:
-                if 2 <= self.debug:
+                if self.debug >= 2:
                     print >> sys.stderr, 'do_keyword: pos=%r, token=%r, stack=%r' % \
                                          (pos, token, self.curstack)
                 self.do_keyword(pos, token)
@@ -663,7 +662,6 @@ func/a/b{(c)do*}def
 
     def get_tokens(self, s):
         import StringIO
-
 
         class MyParser(PSBaseParser):
             def flush(self):
